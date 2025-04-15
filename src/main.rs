@@ -43,7 +43,7 @@ fn usage(name: &str) {
     println!("{name} {VERSION} (multi-call binary)\n");
     println!("Usage: {name} [function [arguments...]]\n");
     println!("Currently defined functions:\n");
-    println!("    cmp, diff\n");
+    println!("    cmp, diff, sdiff\n");
 }
 
 fn second_arg_error(name: &OsStr) -> ! {
