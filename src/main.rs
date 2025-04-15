@@ -14,6 +14,7 @@ use std::{
 mod cmp;
 mod context_diff;
 mod diff;
+mod sdiff;
 mod ed_diff;
 mod macros;
 mod normal_diff;
@@ -71,6 +72,7 @@ fn main() -> ExitCode {
     match util_name.to_str() {
         Some("diff") => diff::main(args),
         Some("cmp") => cmp::main(args),
+        Some("sdiff") => sdiff::main(),
         Some(name) => {
             eprintln!("{}: utility not supported", name);
             ExitCode::from(2)
