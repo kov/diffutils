@@ -69,7 +69,9 @@ pub fn main(opts: Peekable<ArgsOs>) -> ExitCode {
     // ok, now we start running over the lines and get the lines right 
     // and left file
     for i in 0..max_lines {
-        let left = lines_left.get(i).map(|l| String::from_utf8_lossy(l)); // we can convert this is ut8?
+        // now we convert the bytes to utf8. May the file is encoded with invalid chars, 
+        // so it can result in a line with �.
+        let left = lines_left.get(i).map(|l| String::from_utf8_lossy(l)); 
         let right = lines_rght.get(i).map(|r| String::from_utf8_lossy(r));
         
         match (left, right) {
