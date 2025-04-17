@@ -72,7 +72,7 @@ fn main() -> ExitCode {
     match util_name.to_str() {
         Some("diff") => diff::main(args),
         Some("cmp") => cmp::main(args),
-        Some("sdiff") => sdiff::main(),
+        Some("sdiff") => sdiff::main(args),
         Some(name) => {
             eprintln!("{}: utility not supported", name);
             ExitCode::from(2)
