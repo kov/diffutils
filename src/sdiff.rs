@@ -3,7 +3,7 @@ use std::{
     env::ArgsOs,
     ffi::OsString,
     fs,
-    io::{stdin, Read, Write},
+    io::{self, stdin, Read, StdoutLock, Write},
     iter::Peekable,
     process::ExitCode,
     vec,
@@ -45,58 +45,55 @@ pub fn main(opts: Peekable<ArgsOs>) -> ExitCode {
     // first we need to get the properly files
     let file1 = read_file_contents(&params.file1);
     let file2 = read_file_contents(&params.file2);
-    
-    // now we get the lines from the files as bytes, cuz the sdiff 
+
+    // now we get the lines from the files as bytes, cuz the sdiff
     // must be compatible with ut8, ascii etc.
     let mut lines_left: Vec<&[u8]> = file1.split(|&c| c == b'\n').collect();
-    let mut lines_rght: Vec<&[u8]> = file2.split(|&c| c == b'\n').collect();
+    let mut lines_right: Vec<&[u8]> = file2.split(|&c| c == b'\n').collect();
 
-    // for some reason, the original file appends a empty line at 
+    // for some reason, the original file appends a empty line at
     // the end of file. I did not search for it, but my guess is
     // that this is EOL or an zeroed terminated file. Just remove it
     if lines_left.last() == Some(&&b""[..]) {
         lines_left.pop();
     }
 
-    if lines_rght.last() == Some(&&b""[..]) {
-        lines_rght.pop();
+    if lines_right.last() == Some(&&b""[..]) {
+        lines_right.pop();
     }
 
-    let mut output: Vec<u8> = Vec::new();
     let width = 60;
-    let max_lines = lines_left.len().max(lines_rght.len());
+    let max_lines = lines_left.len().max(lines_right.len());
 
-    // ok, now we start running over the lines and get the lines right 
-    // and left file
-    for i in 0..max_lines {
-        // now we convert the bytes to utf8. May the file is encoded with invalid chars, 
-        // so it can result in a line with �.
-        let left = lines_left.get(i).map(|l| String::from_utf8_lossy(l)); 
-        let right = lines_rght.get(i).map(|r| String::from_utf8_lossy(r));
-        
-        match (left, right) {
-            (Some(l), Some(r)) if l == r => {
-                // this is nice, cuz if the line is empty we stiill can print it, cause it equal : )
-                writeln!(output, "{:<width$}   {}", l, r, width = width).unwrap();
-            }
-            (Some(l), Some(r)) => {
-                // if both lines are present but not equal, they are different, just print with |
-                writeln!(output, "{:<width$} | {}", l, r, width = width).unwrap();
-            }
-            (Some(l), None) => {
-                // we have only left val, so print it with <
-                writeln!(output, "{:<width$} <", l, width = width).unwrap();
-            }
-            (None, Some(r)) => {
-                // we have only the ...
-                writeln!(output, "{:<width$} > {}", "", r, width = width).unwrap();
-            }
-            _ => {}
-        }
+    fn write_line(
+        out: &mut StdoutLock,
+        left: &[u8],
+        right: &[u8],
+        middle: &[u8],
+        width: usize,
+    ) -> io::Result<()> {
+        let count = out.write(left.get(..width).unwrap_or(left))?;
+        write!(out, "{}", " ".repeat(width - count))?;
+        out.write(middle)?;
+        out.write(right.get(..width).unwrap_or(right))?;
+        Ok(())
     }
 
-    // now print the line at stdout
-    println!("{}", String::from_utf8(output).unwrap());
+    let mut out = io::stdout().lock();
+    for result in diff::slice(&lines_left, &lines_right) {
+        match result {
+            diff::Result::Left(str) => {
+                write_line(&mut out, str, &[], b" < ", width).unwrap();
+            }
+            diff::Result::Right(str) => {
+                write_line(&mut out, &[], &str, b" > ", width).unwrap();
+            }
+            diff::Result::Both(str_l, str_r) => {
+                write_line(&mut out, str_l, str_r, b"   ", width).unwrap();
+            }
+        }
+        writeln!(&mut out).unwrap();
+    }
 
     ExitCode::SUCCESS
 }
