@@ -100,6 +100,7 @@ pub fn report_failure_to_read_input_file(
 
 /// Limits an string at an certain limiter position. This can broke the
 /// encoding of a specific char where it has been cuted.
+#[must_use]
 pub fn limited_string<'a, T: AsRef<[u8]>>(orig: &'a T, limiter: usize) -> Vec<u8> {
     // TODO: Verify if we have broke the enconding of the char
     // when we cut it.
