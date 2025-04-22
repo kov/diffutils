@@ -98,14 +98,13 @@ pub fn report_failure_to_read_input_file(
     );
 }
 
-/// Limits an string at an certain limiter position. This can broke the
-/// encoding of a specific char where it has been cuted.
+/// Limits a string at a certain limiter position. This can break the
+/// encoding of a specific char where it has been cut.
 #[must_use]
-pub fn limited_string<'a, T: AsRef<[u8]>>(orig: &'a T, limiter: usize) -> Vec<u8> {
-    // TODO: Verify if we have broke the enconding of the char
+pub fn limited_string<'a>(orig: &'a [u8], limiter: usize) -> &'a [u8] {
+    // TODO: Verify if we broke the enconding of the char
     // when we cut it.
-    let bytes = orig.as_ref();
-    bytes[..bytes.len().min(limiter)].to_vec()
+    &orig[..orig.len().min(limiter)]
 }
 
 #[cfg(test)]
@@ -221,28 +220,28 @@ mod tests {
 
         #[test]
         fn empty_orig_returns_empty() {
-            let orig = "";
+            let orig = "".as_bytes();
             let result = limited_string(&orig, 10);
             assert!(result.is_empty());
         }
 
         #[test]
         fn zero_limit_returns_empty() {
-            let orig = "foo";
+            let orig = "foo".as_bytes();
             let result = limited_string(&orig, 0);
             assert!(result.is_empty());
         }
 
         #[test]
         fn limit_longer_than_orig_returns_full() {
-            let orig = "foo";
+            let orig = "foo".as_bytes();
             let result = limited_string(&orig, 10);
-            assert_eq!(result, orig.as_bytes());
+            assert_eq!(result, orig);
         }
 
         #[test]
         fn ascii_limit_in_middle() {
-            let orig = "foobar";
+            let orig = "foobar".as_bytes();
             let result = limited_string(&orig, 3);
             assert_eq!(result, b"foo");
             assert!(str::from_utf8(&result).is_ok()); // All are ascii chars, we do not broke the enconding
@@ -250,7 +249,7 @@ mod tests {
 
         #[test]
         fn utf8_multibyte_cut_invalidates() {
-            let orig = "áéíóú"; 
+            let orig = "áéíóú".as_bytes(); 
             let result = limited_string(&orig, 1);
             // should contain only the first byte of mult-byte char
             assert_eq!(result, vec![0xC3]);
@@ -259,11 +258,11 @@ mod tests {
 
         #[test]
         fn utf8_limit_at_codepoint_boundary() {
-            let orig = "áéí";
-            let bytes = orig.as_bytes();
+            let orig = "áéí".as_bytes();
+            let bytes = &orig;
             let result = limited_string(&orig, bytes.len());
 
-            assert_eq!(result, bytes);
+            assert_eq!(result, *bytes);
             assert!(str::from_utf8(&result).is_ok());
         }
 
