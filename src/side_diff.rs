@@ -1,10 +1,17 @@
 use crate::utils::limited_string;
 use diff::Result;
-use std::{io::{stdout, StdoutLock, Write}, vec};
+use std::{
+    io::{stdout, StdoutLock, Write},
+    vec,
+};
 
-type Buf = Vec<u8>;
-
-fn push_output(output: &mut StdoutLock, left_ln: &[u8], right_ln: &[u8], symbol: &[u8], tab_size: usize) -> std::io::Result<()> {
+fn push_output(
+    output: &mut StdoutLock,
+    left_ln: &[u8],
+    right_ln: &[u8],
+    symbol: &[u8],
+    tab_size: usize,
+) -> std::io::Result<()> {
     // The reason why this function exists, is that we cannot
     // assume a enconding for our left or right line, and the
     // writeln!() macro obligattes us to do it.
@@ -22,7 +29,7 @@ fn push_output(output: &mut StdoutLock, left_ln: &[u8], right_ln: &[u8], symbol:
     output.write_all(symbol)?; // {symbol}
     output.write_all(b" ")?; // {space_char}
     output.write_all(right_ln)?; // {right_line}
-
+    
     if cfg!(target_os = "windows") {
         // {EOL}
         output.write_all(b"\r")?;
@@ -34,15 +41,12 @@ fn push_output(output: &mut StdoutLock, left_ln: &[u8], right_ln: &[u8], symbol:
     Ok(())
 }
 
-pub fn diff(from_file: &Buf, to_file: &Buf) -> Buf {
+pub fn diff(from_file: &Vec<u8>, to_file: &Vec<u8>) -> Vec<u8> {
     //      ^ The left file  ^ The right file
-    fn split_lines(input: &[u8]) -> Vec<&[u8]> {
-        input.split(|&c| c == b'\n').collect()
-    }
-
+    
     let mut output = stdout().lock();
-    let left_lines = split_lines(from_file);
-    let right_lines = split_lines(to_file);
+    let left_lines: Vec<&[u8]> = from_file.split(|&c| c == b'\n').collect();
+    let right_lines: Vec<&[u8]> = to_file.split(|&c| c == b'\n').collect();
     let tab_size = 61; // for some reason the tab spaces are 61 not 60
     for result in diff::slice(&left_lines, &right_lines) {
         match result {
@@ -53,7 +57,8 @@ pub fn diff(from_file: &Buf, to_file: &Buf) -> Buf {
                     &[],
                     b"<",
                     tab_size,
-                ).unwrap();
+                )
+                .unwrap();
             }
             Result::Right(right_ln) => {
                 push_output(
@@ -62,7 +67,8 @@ pub fn diff(from_file: &Buf, to_file: &Buf) -> Buf {
                     &limited_string(right_ln, tab_size),
                     b">",
                     tab_size,
-                ).unwrap();
+                )
+                .unwrap();
             }
             Result::Both(left_ln, right_ln) => {
                 push_output(
@@ -71,7 +77,8 @@ pub fn diff(from_file: &Buf, to_file: &Buf) -> Buf {
                     &limited_string(right_ln, tab_size),
                     b" ",
                     tab_size,
-                ).unwrap();
+                )
+                .unwrap();
             }
         }
     }
